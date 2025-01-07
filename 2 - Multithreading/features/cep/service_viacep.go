@@ -2,10 +2,8 @@ package cep
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/renebizelli/goexpert/desafios/multithreading/internal/utils"
 )
@@ -23,27 +21,29 @@ type ViaCEP struct {
 	Name    string `default:"ViaCEP"`
 	URL     string
 	Timeout int
+	Ctx     context.Context
 }
 
-func NewViaCEPService(url string, timeout int) *ViaCEP {
+func NewViaCEPService(url string, ctx context.Context) *ViaCEP {
 	return &ViaCEP{
-		URL:     url,
-		Timeout: timeout,
-		Name:    "ViaCEP",
+		URL:  url,
+		Ctx:  ctx,
+		Name: "ViaCEP",
 	}
 }
 
-func (v *ViaCEP) Searching(searchedCEP string) (*Response, error) {
+func (v *ViaCEP) Searching(searchedCEP string, channel chan<- *Response) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(v.Timeout))
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(v.Timeout))
+	// defer cancel()
 
 	url := strings.Replace(v.URL, "?", searchedCEP, 1)
 
-	serviceResponse, error := utils.ExecRequestWithContext[viaCEPResponse](ctx, url)
+	serviceResponse, error := utils.ExecRequestWithContext[viaCEPResponse](v.Ctx, url)
 
 	if error != nil {
-		return nil, errors.New(ErrorMessage(v.Name, searchedCEP, error))
+		ErrorMessage(v.Name, searchedCEP, error)
+		return
 	}
 
 	response := Response{
@@ -55,5 +55,5 @@ func (v *ViaCEP) Searching(searchedCEP string) (*Response, error) {
 		Source:       v.Name,
 	}
 
-	return &response, nil
+	channel <- &response
 }

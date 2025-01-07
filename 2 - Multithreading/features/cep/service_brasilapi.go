@@ -2,9 +2,7 @@ package cep
 
 import (
 	"context"
-	"errors"
 	"fmt"
-	"time"
 
 	"github.com/renebizelli/goexpert/desafios/multithreading/internal/utils"
 )
@@ -21,27 +19,29 @@ type BrasilApi struct {
 	Name    string
 	URL     string
 	Timeout int
+	Ctx     context.Context
 }
 
-func NewBrasilAPIService(url string, timeout int) *BrasilApi {
+func NewBrasilAPIService(url string, ctx context.Context) *BrasilApi {
 	return &BrasilApi{
-		URL:     url,
-		Timeout: timeout,
-		Name:    "BrasilAPI",
+		URL:  url,
+		Ctx:  ctx,
+		Name: "BrasilAPI",
 	}
 }
 
-func (b *BrasilApi) Searching(searchedCEP string) (*Response, error) {
+func (b *BrasilApi) Searching(searchedCEP string, channel chan<- *Response) {
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(b.Timeout))
-	defer cancel()
+	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(b.Timeout))
+	// defer cancel()
 
 	url := fmt.Sprintf("%s%s", b.URL, searchedCEP)
 
-	serviceResponse, error := utils.ExecRequestWithContext[serviceResponse](ctx, url)
+	serviceResponse, error := utils.ExecRequestWithContext[serviceResponse](b.Ctx, url)
 
 	if error != nil {
-		return nil, errors.New(ErrorMessage(b.Name, searchedCEP, error))
+		ErrorMessage(b.Name, searchedCEP, error)
+		return
 	}
 
 	response := Response{
@@ -53,6 +53,5 @@ func (b *BrasilApi) Searching(searchedCEP string) (*Response, error) {
 		Source:       b.Name,
 	}
 
-	return &response, nil
-
+	channel <- &response
 }

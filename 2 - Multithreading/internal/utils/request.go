@@ -3,6 +3,7 @@ package utils
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 
@@ -18,7 +19,17 @@ func ExecRequestWithContext[T any](ctx context.Context, URL string) (*T, *dtos.R
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, &dtos.RequestError{Message: err.Error(), StatusCode: res.StatusCode}
+
+		if ctx.Err() == context.Canceled {
+			return nil, nil
+		}
+
+		return nil, &dtos.RequestError{Message: err.Error(), StatusCode: 400}
+	}
+
+	if res.StatusCode != 200 {
+		fmt.Println(res)
+		return nil, &dtos.RequestError{Message: "Invalid request", StatusCode: res.StatusCode}
 	}
 
 	defer res.Body.Close()

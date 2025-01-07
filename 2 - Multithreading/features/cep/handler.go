@@ -1,9 +1,11 @@
 package cep
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/renebizelli/goexpert/desafios/multithreading/configs"
@@ -23,25 +25,32 @@ func Handler(w http.ResponseWriter, r *http.Request) {
 
 	searchedCEP := chi.URLParam(r, "cep")
 
-	viaCEP := NewViaCEPService(config.Services.ViacepUrl, config.Services.Timeout)
-	brasilApi := NewBrasilAPIService(config.Services.BrasilApiUrl, config.Services.Timeout)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(config.Services.Timeout))
+	defer cancel()
 
-	services := []SearchingInfo{viaCEP, brasilApi}
+	brasilApi := NewBrasilAPIService(config.Services.BrasilApiUrl, ctx)
+	viaCEP := NewViaCEPService(config.Services.ViacepUrl, ctx)
 
-	w.Header().Set("Content-Type", "application/json")
+	services := []SearchingInfo{brasilApi, viaCEP}
 
-	//wg := sync.WaitGroup{}
+	ch := make(chan *Response)
 
 	for _, service := range services {
-
-		response, error := service.Searching(searchedCEP)
-
-		if error != nil {
-			fmt.Println(error.Error())
-		} else {
-			json.NewEncoder(w).Encode(response)
-		}
+		go service.Searching(searchedCEP, ch)
 	}
 
-	w.WriteHeader(200)
+	select {
+	case response := <-ch:
+		ctx.Done()
+		fmt.Printf("Received from %s: %v\n", response.Cep, response.Source)
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(response)
+		w.WriteHeader(200)
+
+	case <-time.After(3 * time.Second):
+		fmt.Println("timeout")
+		w.WriteHeader(400)
+
+	}
+
 }
