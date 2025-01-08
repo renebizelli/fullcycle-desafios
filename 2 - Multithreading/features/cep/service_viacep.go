@@ -18,30 +18,28 @@ type viaCEPResponse struct {
 }
 
 type ViaCEP struct {
-	Name    string `default:"ViaCEP"`
-	URL     string
-	Timeout int
-	Ctx     context.Context
+	Name string `default:"ViaCEP"`
+	URL  string
+	Ctx  context.Context
 }
 
-func NewViaCEPService(url string, ctx context.Context) *ViaCEP {
+func NewViaCEPService(url string) *ViaCEP {
 	return &ViaCEP{
 		URL:  url,
-		Ctx:  ctx,
 		Name: "ViaCEP",
 	}
 }
 
-func (v *ViaCEP) Searching(searchedCEP string, channel chan<- *Response) {
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(v.Timeout))
-	// defer cancel()
+func (v *ViaCEP) Searching(ctx context.Context, searchedCEP string, channel chan<- *Response) {
 
 	url := strings.Replace(v.URL, "?", searchedCEP, 1)
 
-	serviceResponse, error := utils.ExecRequestWithContext[viaCEPResponse](v.Ctx, url)
+	serviceResponse, error := utils.ExecRequestWithContext[viaCEPResponse](ctx, url)
 
 	if error != nil {
+		if error.StatusCode == 499 {
+			return
+		}
 		ErrorMessage(v.Name, searchedCEP, error)
 		return
 	}

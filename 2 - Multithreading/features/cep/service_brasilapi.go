@@ -7,7 +7,7 @@ import (
 	"github.com/renebizelli/goexpert/desafios/multithreading/internal/utils"
 )
 
-type serviceResponse struct {
+type brasilAPIResponse struct {
 	Cep          string `json:"cep"`
 	State        string `json:"state"`
 	City         string `json:"city"`
@@ -16,40 +16,38 @@ type serviceResponse struct {
 }
 
 type BrasilApi struct {
-	Name    string
-	URL     string
-	Timeout int
-	Ctx     context.Context
+	Name string
+	URL  string
+	Ctx  context.Context
 }
 
-func NewBrasilAPIService(url string, ctx context.Context) *BrasilApi {
+func NewBrasilAPIService(url string) *BrasilApi {
 	return &BrasilApi{
 		URL:  url,
-		Ctx:  ctx,
 		Name: "BrasilAPI",
 	}
 }
 
-func (b *BrasilApi) Searching(searchedCEP string, channel chan<- *Response) {
-
-	// ctx, cancel := context.WithTimeout(context.Background(), time.Second*time.Duration(b.Timeout))
-	// defer cancel()
+func (b *BrasilApi) Searching(ctx context.Context, searchedCEP string, channel chan<- *Response) {
 
 	url := fmt.Sprintf("%s%s", b.URL, searchedCEP)
 
-	serviceResponse, error := utils.ExecRequestWithContext[serviceResponse](b.Ctx, url)
+	brasilAPIResponse, error := utils.ExecRequestWithContext[brasilAPIResponse](ctx, url)
 
 	if error != nil {
+		if error.StatusCode == 499 {
+			return
+		}
 		ErrorMessage(b.Name, searchedCEP, error)
 		return
 	}
 
 	response := Response{
-		Cep:          serviceResponse.Cep,
-		State:        serviceResponse.State,
-		City:         serviceResponse.City,
-		Neighborhood: serviceResponse.Neighborhood,
-		Street:       serviceResponse.Street,
+		Cep:          brasilAPIResponse.Cep,
+		State:        brasilAPIResponse.State,
+		City:         brasilAPIResponse.City,
+		Neighborhood: brasilAPIResponse.Neighborhood,
+		Street:       brasilAPIResponse.Street,
 		Source:       b.Name,
 	}
 

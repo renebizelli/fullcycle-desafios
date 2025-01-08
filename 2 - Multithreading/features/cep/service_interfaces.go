@@ -1,5 +1,7 @@
 package cep
 
+import "context"
+
 type SearchingInfo interface {
-	Searching(searchedCEP string, channel chan<- *Response)
+	Searching(ctx context.Context, searchedCEP string, channel chan<- *Response)
 }
