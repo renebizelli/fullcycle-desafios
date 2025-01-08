@@ -11,18 +11,6 @@ import (
 	"github.com/renebizelli/goexpert/desafios/multithreading/internal/utils"
 )
 
-// @title GO Expert - Desafio 2 - Multithreading
-// @version 1
-// @description Este é o desafio 2 do curso de Go Expert
-// @host localhost:8080
-// @BasePath /
-// @schemes http
-// @contact.email rene.bizelli@gmail.com
-// @contact.name René Bizelli
-// @securityDefinitions.apikey ApiKeyAuth
-// @in header
-// @name Authorization
-
 func main() {
 
 	configs := configs.LoadConfig(".")
